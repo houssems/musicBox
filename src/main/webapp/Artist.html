@@ -1,0 +1,255 @@
+<h1 class="caption">Artist Search</h1>
+<div class="divider"></div>
+
+<h1>Artist Search</h1>
+<div class="contactForm dform">
+	<form>
+	<p>
+		<label for="name">Artist Name/Band</label>
+		<input type="hidden" id="name_title" name="title[]" value="Name" />
+		<div class="dFormInput">
+			<input  id="artistName" type="text"  />
+		</div>
+	</p>
+		
+	<p style="padding:0px;">
+		<label for="submit">&nbsp;</label>
+		<div class="form_input">
+			<a class="nolink submitButton" id="playArtist" href="javascript:void(0);" >Watch</a>
+		</div>
+	</p>
+</form>
+</div>			
+			
+			
+<div class="divider"></div>
+<div id="showSimilarArtists" class="kc-wrap" style="-webkit-perspective: 10000000000px;">
+	<div class="kc-horizon" style="position: absolute; top: 50%; width: 800px; -webkit-perspective: 1500px; -webkit-transform-style: preserve-3d; -webkit-perspective-origin-x: 50%; -webkit-perspective-origin-y: 0px; left: 5.5px; -webkit-transform: scaleX(0.7603125) scaleY(0.7603125); visibility: visible;"></div><div style="position: absolute; left: 10px; bottom: 10px; z-index: 100000; visibility: visible; display: block; color: rgb(255, 255, 255); text-shadow: none; font-family: sans-serif; font-size: 10px; font-weight: bold; padding: 2px; border: 1px solid rgb(68, 0, 0); background-color: rgb(221, 0, 0);">
+	Similar Artist
+	</div>
+</div>
+
+
+<hr class="seperator" />
+<div class="clearfix"></div>
+<script>
+$("#artistName").keyup(function(){
+		//alert("ok");	
+			var similarArtists = new Array();
+			var artistNameInput = $(this);
+			var input = $(this).val();
+            if(input.length > 3 ){
+            	
+				 $.get("/rest/search/artist/".concat(input),function(data,status){
+					      if(status=="success"){
+				    	      var jsonObject = data;
+						  
+				    	      var arrayResultLength = (jsonObject["results"]["artistmatches"]["artist"]).length; 
+				    	  	  for(var i=0;i<arrayResultLength;i++){
+				    	    	  similarArtists[i] = jsonObject["results"]["artistmatches"]["artist"][i].name;  
+				    	      }
+				    	  	  $(artistNameInput).autocomplete({source: similarArtists});					    	  	  
+					     	 }					      
+				   		 });
+					}		  
+			  	});	
+
+$("#playArtist").click(function() {
+		    	var input = $("#artistName").val();
+				//alert(input);
+		    	if(input.length > 3){
+		    		// play selected input artist name in youtube 
+		    			playYouTubeArtistPlayList(input);
+		    		}
+		    	
+		   		 }).click(function(){
+		   			var input = $("#artistName").val();
+		   			if(input.length > 3){
+		   			 $('#loadingmessage').show();
+		   			 $('#loadingmessage').delay(6000).fadeOut();
+		   			 
+		   				$.get("/rest/search/similarArtist/".concat(input),function(data,status){
+		   					if(status=="success"){
+		   						var jsonObjectSimilarArtists = data;
+		   						var showDiv = $('#showSimilarArtists');
+		   						
+		   					
+		   						if( jsonObjectSimilarArtists.similarartists == undefined ){
+		   							
+		   							$('#loadingmessage').hide();
+		   							$( "#notFoundError" ).text(jsonObjectSimilarArtists.message);
+		   						  	$( "#dialog-modal" ).dialog({
+		   						      height: 140,
+		   						      modal: true
+		   						    });
+		   							
+		   						} else {
+		   							
+			   						for(var i=0;i<(jsonObjectSimilarArtists.similarartists["artist"]).length;i++){
+			   							var $div = $("<div>", {class: "kc-item"});
+			   							
+			   							
+			   							var hyperLink =  $('<a>');
+			   							hyperLink.attr('href','#');
+			   							
+			   							var img  = $('<img>');
+			   							img.attr('src', jsonObjectSimilarArtists.similarartists["artist"][i].image["4"]["#text"]);		   							
+			   							var artistName = jsonObjectSimilarArtists.similarartists["artist"][i].name;
+			   							
+			   							
+			   							hyperLink.append(img);
+			   							
+			   							$div.attr('title',artistName);
+			   							$div.attr('artistName',artistName);
+			   							$div.click(function(e){
+					    	    			playSelectedArtist(e);
+					    	    		});
+			   							
+			   							$div.append(hyperLink);
+			   							showDiv.append($div);
+			   						}
+			   						
+			   						
+					                $('.kc-wrap').KillerCarousel({
+					                    // Default natural width of carousel.
+					                    width: 800,
+					                    // Item spacing in 3d (has CSS3 3d) mode.
+					                    spacing3d: 120,
+					                    // Item spacing in 2d (no CSS3 3d) mode. 
+					                    spacing2d: 120,
+					                    showShadow: true,
+					                    showReflection: true,
+					                    // Looping mode.
+					                    infiniteLoop: true,
+					                    // Scale at 75% of parent element.
+					                    autoScale: 75
+					                });
+			   						//
+			   						
+			   						 $('#loadingmessage').hide(); // hide the loading message
+		   						}
+		   						
+		   						
+
+		   					}		   						
+		   				});//end of get function
+		   				
+		   				
+		   			}
+		   			
+		   			 
+		   		 }).click(function(){
+		   			var input = $("#artistName").val();
+		   			showLastFmArtistInfo(input);
+		   		 });
+		    
+		    
+		    function showLastFmArtistInfo(artistName){
+	   			if(artistName.length > 3){
+	   				$.get("/rest/search/artistInfo/".concat(artistName), function(data,status){
+	   						if(status=="success"){
+	   							var artistLastFmInfoDiv	= $('#artistLastFmInfo'); 
+	   							artistLastFmInfoDiv.empty();
+	   							var img  = $('<img>');
+	   							var jsonObjectArtistInfo = data;
+	   							img.attr('src', jsonObjectArtistInfo.artist.image["3"]["#text"]);
+	   							img.attr('title',jsonObjectArtistInfo.artist.name);
+	   							img.height(180).width(180);
+	   							artistLastFmInfoDiv.append(img);
+	   						}
+	   					}	
+	   					
+	   				);
+	   			}
+		    }
+		    
+		    
+   			function playSelectedArtist (event) {   				
+   				var artistName = $(event.currentTarget).attr('artistName');
+   				playYouTubeArtistPlayList(artistName);
+   				showLastFmArtistInfo(artistName);
+	   			
+   			}
+   			
+   			function playYouTubeArtistPlayList(input){
+   				
+   			 $.get("/rest/searchYoutube/playlist/".concat(input),function(data,status){
+				  if(status=="success"){
+					  //alert("ok");
+		    	      var jsonObjectPlayList = data;
+		    	      
+		    	      var youtTubePlaylistId = jsonObjectPlayList.data.items[0].id;
+		    	      //alert(youtTubePlaylistId);
+		    	      // get the video ids in the playlist 
+		    	   
+		    	      $.get("/rest/searchYoutube/loadPlaylistItem/".concat(youtTubePlaylistId), function(data,status){ 
+		    	    	  
+						  if(status=="success"){
+		    	    		  var jsonObjectPlayListItems = data;	
+									
+		    	    		    var playListItemsArray = jsonObjectPlayListItems["items"];
+		    	    		    var videoId = new Array();
+		    	    		    for(var i=0;i<playListItemsArray.length;i++){
+		    	    		    	videoId[i] = playListItemsArray[i].snippet.resourceId.videoId;
+									
+		    	    		    }
+		    	  
+		    	    		    //player.loadPlaylist(videoId);
+		    	    		    //player.playVideo();
+		    	    		    
+		    	    		    $("#bgImages").empty();
+		    	    		    for(var i=0;i<playListItemsArray.length;i++){
+		    	    		    	var url = $('<a>');
+									url.attr('href','http://youtu.be/'+playListItemsArray[i].snippet.resourceId.videoId+'?width=560&height=315');
+									
+									var imgUrl = playListItemsArray[i].snippet.thumbnails.default.url;
+		    	    		    	var img = $('<img>');
+		    	    		    	img.attr('src',imgUrl);
+									img.attr('class','thumb'); 
+		    	    		    	img.height(150);
+		    	    		    	img.width(150);
+		    	    		    	url.append(img);
+									
+										var listItem = $('');
+									
+									
+		    	    		    	
+		    	    		    	var titre= '<li>'+
+									'<a href= "http://youtu.be/'+playListItemsArray[i].snippet.resourceId.videoId+'?width=560&height=315">'+
+									'<img src="'+imgUrl+'" class="thumb" height=150 width=150 alt="" /></a>'+
+									'<h3>'+input+'</h3>'+
+									'<p>'+playListItemsArray[i].snippet.title+'</p>'+
+									'</li>';
+									//var artistname=$('<h3>');
+									//artistname.append(input);
+									//titre.append(playListItemsArray[i].snippet.title);
+		    	    		    	//listItem.append(url);
+									//listItem.append(artistname);
+		    	    		    	//listItem.append(titre);
+									//listItem.append('<div class="thumbType thumbVideo" style="opacity: 1;"></div>');
+									//alert(videoId[i]);
+		    	    		    	//listItem.append(' '+ playListItemsArray[i].snippet.title+' ' );
+		    	    		    	/* '<li>'+img.html() + +' '+ playListItemsArray[i].snippet.title  +'</li>' */
+									//alert(titre);
+		    	    		    	$("#bgImages").append(titre);
+		    	    		    	
+		    	    		    }
+								//
+								//changeMode();
+								$('#bgImages li:first-child').addClass('active');
+								//init();
+								runBg();
+								galleryThumbs();
+								
+								
+		    	    		    
+		    	    	  }
+		    	      });
+			     	 }	
+		   		 });
+   			 
+   			 
+   			 
+   			}
+   			
+</script>

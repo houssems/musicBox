@@ -1,0 +1,225 @@
+<h1 class="caption">Event Search</h1>
+<div class="divider"></div>
+
+<h1>Event Search</h1>
+<div class="contactForm dform">
+	<form>
+	<p>
+		<label for="name">Place</label>
+		<input type="hidden" id="name_title" name="title[]" value="Name" />
+		<div class="dFormInput">
+			<select id="country"> </select>
+		</div>
+	</p>
+</form>
+</div>			
+			
+			
+<div class="divider"></div>
+<div id="eventlist">
+</div>
+
+<div id="map-canvas"></div>
+
+
+<hr class="seperator" />
+<div class="clearfix"></div>
+<script >
+
+
+
+
+$(function(){	
+				var mapOptions;
+		    	mapOptions = {center: new google.maps.LatLng(51.5072,0.1275), zoom: 1};
+				map = new google.maps.Map(document.getElementById("map-canvas"),mapOptions);
+		 		$( this ).off(event);
+				//alert("ok");	    	
+		    	  $.get("/rest/search/allEventLocations",function(data,status){
+					  if(status=="success") { 
+						  var jsonEventLocations = data;
+						  var metrosLength =(jsonEventLocations.metros["metro"]).length;
+						  var map = new Object();						  
+						  for(var i=0;i<metrosLength;i++){
+							var region = (jsonEventLocations.metros["metro"][i]).name;
+							var country = (jsonEventLocations.metros["metro"][i]).country;
+							if( typeof map[country] == "undefined"){
+									var regions = new Array();
+									regions.push(region);
+									map[country] = regions;
+								} else {
+							    	 (map[country]).push(region);
+							}
+						  }						  
+						  var keys = Object.keys(map);
+						  for(var i=0;i<keys.length;i++){				  
+							 $("#country").append('<option value="'+keys[i]+'">'+keys[i]+'</option>');
+							 var regionsArray  = map[keys[i]];
+							 for(var j=0; j< regionsArray.length; j++ ){
+								$("#country").append('<option value="'+regionsArray[j]+'">&nbsp;&nbsp;&nbsp;'+regionsArray[j]+'</option>');								
+								 }
+						 	 }
+					 	 }
+		    	  	});		
+				});
+		    
+			  
+		    
+		 
+		    $("#country").change(function(){
+		    	$('#loadingmessage').show();
+		    	var locationSelected = $(this).val();
+		    
+		    	deleteMarkers();
+		    	
+		    	$.get("/rest/search/allEvents/".concat(locationSelected),function(data,status){
+		    		if(status=="success"){
+		    			
+		    			var eventDetails = data;	
+		    			
+		    			
+		    			$("#eventlist").empty();
+		    			for(var i=0; i < (eventDetails.events["event"]).length;i++ ){
+		    				var event = (eventDetails.events["event"])[i];		    				
+		    				var geo = eventDetails.events["event"][i].venue.location["geo:point"];
+		    				var eventLatLng =  new google.maps.LatLng(geo["geo:lat"] ,geo["geo:long"]);
+		    				var marker = new google.maps.Marker();
+		    				marker.setPosition(eventLatLng);
+		    				marker.setAnimation(google.maps.Animation.DROP);
+		    				marker.setTitle(event.title);
+		    				marker.setMap(map);
+		    				google.maps.event.addListener(marker, 'click',setInfoWindowOnMarker(event, map, marker) );
+		    				markers.push(marker);
+							
+							
+							var imgs='<div class="blogitem"><h3>'+event.title+'</h3>'+
+							 '<div class="blogimage"><div class="image_frame"><a href="'+event.image[3]['#text']+'">'+
+							'<img src="'+event.image[3]['#text']+
+							'" width="350" height="225" title="'+event.artists.headliner+'" alt="" /></a>'+
+							'<div class="hoverWrapperBg" style="width: 350px; height: 225px; opacity: 0;">'+
+							'</div> <div class="hoverWrapper" style="width: 350px; height: 225px;">'+
+							'<a class="link" href="#!single.html">'+
+							'</a><a class="modal" href="javascript:void(0);"></a></div></div></div>'+
+							'<div class="blogcontent"><div class="blogdatemeta"><div class="blogdate">'+event.startDate+
+							'</div><div class="meta-links"><a class="meta-author" href="javascript:void(0);" rel="'+event.artists.headliner+
+							'"></a><a class="meta-comments" href="javascript:void(0);" rel="'+event.reviews+' reviews"'+
+							'></a><a class="meta-tags" href="javascript:void(0);" rel="'+event.tag+'"></a></div></div><p>'+
+							'<span style="font-weight:bold;text-decoration:underline"> Artists  </span> <br>'+
+					'<span style="font-weight:bold"> Head Liner  </span>'+ event.artists.headliner + '<br>'+
+					'<span style="font-weight:bold;text-decoration:underline"> Venue Details </span> <br>'+
+					'<span style="font-weight:bold">Venue Name: </span>'+ event.venue.name +'<br> '+
+					'<span style="font-weight:bold;text-decoration:underline"> Venue Name Location </span> <br>'+
+					'<span style="font-weight:bold">City: </span>'+ event.venue.location.city +'<br>'+
+					'<span style="font-weight:bold">Country: </span>'+ event.venue.location.country +' <br>'+
+					'<span style="font-weight:bold">Street: </span>'+ event.venue.location.street +' <br>'+
+					'<span style="font-weight:bold">Postal Code: </span>'+ event.venue.location.postalcode +' <br>'+
+					'<span style="font-weight:bold">Phone Number: </span>'+ event.venue.phonenumber +' <br>'+
+					'<span style="font-weight:bold">Last fm url: </span>'+ event.venue.url +' <br>'+
+					'<span style="font-weight:bold">Website url: </span>'+ event.venue.website +'<br>'+
+							'</p><a class="morelink" href="#!single.html">READ MORE</a></div><hr class="seperator"/><div class="clearfix"></div></div>';
+							//alert(imgs);
+							
+							$("#eventlist").append(imgs);
+							
+							
+		    			}
+		    			
+		    		}
+		    		
+		    		
+		    		
+		    		
+		    		
+		    	});
+		    	
+		    	$.get("http://nextgen.nextgenentertainment.cloudbees.net/searchCountry/search/".concat(locationSelected),function(data,status){
+		    		
+		    		if(status=="success"){
+					
+		    			    var marker = new google.maps.Marker();
+		    				var eventLatLng =  new google.maps.LatLng(data.latitude ,data.longitude);		    				
+		    				marker.setPosition(eventLatLng);
+		    				marker.setAnimation(google.maps.Animation.DROP);
+		    				marker.setTitle(data.name);
+		    				marker.setIcon({url:data.imageUrl, scaledSize:new google.maps.Size(25, 25) });
+		    				marker.setMap(map);
+		    				markers.push(marker);
+		    				$('#loadingmessage').hide();
+		    				
+		    			}
+		    	
+		    	});
+		    	
+		    	
+		    	
+		    });
+		    
+		
+		    
+		    
+		   function setInfoWindowOnMarker(event, map, marker) {			   
+			   return function() { getInfoWindow(event).open(map, marker); }
+		   }
+		    
+		    
+		    
+		    function getInfoWindow(event){
+		    	var infowindow =  new google.maps.InfoWindow();
+		    	infowindow.setContent(getContentString(event));
+		    	return infowindow;
+		    }
+		    
+		    
+		    
+		    function getContentString(event){
+		    	
+			    	var eventTag = '';
+			    	if( typeof event.tags!= "undefined" ){
+			    		if( typeof event.tags["tag"] != "undefined"){
+				    		if(typeof (event.tags["tag"]).length != "undefined" ) {
+				    			for(var i=0;i<event.tags["tag"].length;i++  ){
+					    			eventTag = eventTag +' ' +event.tags["tag"][i];
+					    		}
+				    		} else {
+				    			eventTag = event.tags.tag;
+				    		}
+				    	}
+			    	}
+		    	
+		    	
+			    	var content = '<div id="content">'+
+					'<h1 id="firstHeading" class="firstHeading">'+ event.title +'</h1>'+
+					'<p><span style="font-weight:bold;text-decoration:underline"> Artists  </span> <br>'+
+					'<span style="font-weight:bold"> Head Liner  </span>'+ event.artists.headliner + '<br>'+
+					'<span style="font-weight:bold;text-decoration:underline"> Venue Details </span> <br>'+
+					'<span style="font-weight:bold">Venue Name: </span>'+ event.venue.name +'<br> '+
+					'<span style="font-weight:bold;text-decoration:underline"> Venue Name Location </span> <br>'+
+					'<span style="font-weight:bold">City: </span>'+ event.venue.location.city +'<br>'+
+					'<span style="font-weight:bold">Country: </span>'+ event.venue.location.country +' <br>'+
+					'<span style="font-weight:bold">Street: </span>'+ event.venue.location.street +' <br>'+
+					'<span style="font-weight:bold">Postal Code: </span>'+ event.venue.location.postalcode +' <br>'+
+					'<span style="font-weight:bold">Phone Number: </span>'+ event.venue.phonenumber +' <br>'+
+					'<span style="font-weight:bold">Last fm url: </span>'+ event.venue.url +' <br>'+
+					'<span style="font-weight:bold">Website url: </span>'+ event.venue.website +'<br>'+
+					'<img src="'+event.image[3]['#text']+'"> <br>'+
+					'<span style="font-weight:bold"> Event Date: </span>'+ event.startDate +'<br>'+
+					'<span style="font-weight:bold">Tags: </span>'+ eventTag  +'<br> </p>'+
+			    '</div>';
+		    				    
+		    				    
+		    				
+		    	return content;
+		    }
+		    
+		    
+		    
+		 // Deletes all markers in the array by removing references to them.
+		    function deleteMarkers() {
+		    	  for (var i = 0; i < markers.length; i++) {
+		    		 markers[i].setMap(null);
+		    	  }
+		    	  markers = [];
+		    	}
+				
+			
+</script>
